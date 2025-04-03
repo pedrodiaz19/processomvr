@@ -77,7 +77,7 @@
         <div class="instrucoes">
             <p><strong>Instruções:</strong></p>
             <p>Este site permite que professores e servidores consultem o andamento ou cálculo do processo contra o Município de Volta Redonda.</p>
-            <p>Para acessar as informações, digite seu número de CPF e clique em <strong>Consultar</strong>.</p>
+            <p>Para acessar as informações, digite seu número de CPF ou matrícula e clique em <strong>Consultar</strong>.</p>
         </div>
 
         <input type="text" id="numero_processo" placeholder="Digite o número do CPF">
@@ -89,7 +89,7 @@
         function consultarProcesso() {
             let entrada = document.getElementById("numero_processo").value;
             if (!entrada) {
-                alert("Por favor, insira um número de processo ou CPF.");
+                alert("Por favor, insira um número de matrícula ou CPF.");
                 return;
             }
 
