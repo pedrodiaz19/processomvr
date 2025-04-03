@@ -29,6 +29,15 @@
             width: 200px;
             margin-bottom: 20px;
         }
+        .instrucoes {
+            background-color: #d1d1d1;
+            border-left: 4px solid #1a1b1c;
+            padding: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 14px;
+            border-radius: 5px;
+        }
         input, button {
             width: calc(100% - 20px);
             padding: 10px;
@@ -62,9 +71,16 @@
 </head>
 <body>
     <div class="container">
-         <img src="/static/k2-f1 - Copia.jpg" alt="Logo da K2 Consultoria Econômica">
+        <img src="/static/k2-f1 - Copia.jpg" alt="Logo da K2 Consultoria Econômica">
         <h2>Consulta de Processos</h2>
-        <input type="text" id="numero_processo" placeholder="Digite o número do processo ou CPF">
+
+        <div class="instrucoes">
+            <p><strong>Instruções:</strong></p>
+            <p>Este site permite que professores e servidores consultem o andamento ou cálculo do processo contra o Município de Volta Redonda.</p>
+            <p>Para acessar as informações, digite seu número de CPF e clique em <strong>Consultar</strong>.</p>
+        </div>
+
+        <input type="text" id="numero_processo" placeholder="Digite o número do CPF">
         <button onclick="consultarProcesso()">Consultar</button>
         <div id="resultado" class="resultado-container"></div>
     </div>
@@ -77,13 +93,12 @@
                 return;
             }
 
-            // Remove pontos e traços da entrada
             entrada = entrada.replace(/[.\-]/g, '');
 
-            fetch(https://site-p-mrv.onrender.com/consulta?processo=${entrada})
+            fetch(`https://site-p-mrv.onrender.com/consulta?processo=${entrada}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(Erro HTTP! Status: ${response.status});
+                        throw new Error(`Erro HTTP! Status: ${response.status}`);
                     }
                     return response.json();
                 })
@@ -93,24 +108,29 @@
                     resultadoDiv.innerHTML = "";
 
                     if (data.erro) {
-                        resultadoDiv.innerHTML = <p style='color: red;'>${data.erro}</p>;
+                        resultadoDiv.innerHTML = `<p style='color: red;'>${data.erro}</p>`;
                     } else {
                         data.forEach(item => {
-                            resultadoDiv.innerHTML += 
+                            let linkCalculo = item.arquivo_calculo ? 
+                                `<a href='${item.arquivo_calculo}' target='_blank'>Baixar Cálculo</a>` : 
+                                "Não disponível.";
+                            
+                            resultadoDiv.innerHTML += `
                                 <div class='resultado'>
                                     <p><strong>Processo:</strong> ${item.processo}</p>
                                     <p><strong>Vara:</strong> ${item.vara}</p>
                                     <p><strong>Nome:</strong> ${item.nome}</p>
                                     <p><strong>Status:</strong> ${item.status}</p>
+                                    <p><strong>Cálculo:</strong> ${linkCalculo}</p>
                                     <hr>
                                 </div>
-                            ;
+                            `;
                         });
                     }
                 })
                 .catch(error => {
                     console.error("Erro na requisição:", error);
-                    document.getElementById("resultado").innerHTML = <p style='color: red;'>Erro ao buscar processo. Verifique o console.</p>;
+                    document.getElementById("resultado").innerHTML = `<p style='color: red;'>Erro ao buscar processo. Verifique o console.</p>`;
                 });
         }
     </script>
