@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Processos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            background-color: #f4f4f4;
+            overflow-y: auto;
+            padding-top: 20px;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 400px;
+            position: relative;
+        }
+        img {
+            width: 200px;
+            margin-bottom: 20px;
+        }
+        input, button {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #333;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        .resultado-container {
+            max-height: 400px;
+            overflow-y: auto;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .resultado {
+            text-align: left;
+            background: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+         <img src="/static/k2-f1 - Copia.jpg" alt="Logo da K2 Consultoria Econômica">
+        <h2>Consulta de Processos</h2>
+        <input type="text" id="numero_processo" placeholder="Digite o número do processo ou CPF">
+        <button onclick="consultarProcesso()">Consultar</button>
+        <div id="resultado" class="resultado-container"></div>
+    </div>
+
+    <script>
+        function consultarProcesso() {
+            let entrada = document.getElementById("numero_processo").value;
+            if (!entrada) {
+                alert("Por favor, insira um número de processo ou CPF.");
+                return;
+            }
+
+            // Remove pontos e traços da entrada
+            entrada = entrada.replace(/[.\-]/g, '');
+
+            fetch(https://site-p-mrv.onrender.com/consulta?processo=${entrada})
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(Erro HTTP! Status: ${response.status});
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Dados recebidos:", data);
+                    let resultadoDiv = document.getElementById("resultado");
+                    resultadoDiv.innerHTML = "";
+
+                    if (data.erro) {
+                        resultadoDiv.innerHTML = <p style='color: red;'>${data.erro}</p>;
+                    } else {
+                        data.forEach(item => {
+                            resultadoDiv.innerHTML += 
+                                <div class='resultado'>
+                                    <p><strong>Processo:</strong> ${item.processo}</p>
+                                    <p><strong>Vara:</strong> ${item.vara}</p>
+                                    <p><strong>Nome:</strong> ${item.nome}</p>
+                                    <p><strong>Status:</strong> ${item.status}</p>
+                                    <hr>
+                                </div>
+                            ;
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Erro na requisição:", error);
+                    document.getElementById("resultado").innerHTML = <p style='color: red;'>Erro ao buscar processo. Verifique o console.</p>;
+                });
+        }
+    </script>
+</body>
+</html>
