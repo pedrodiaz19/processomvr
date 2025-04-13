@@ -43,28 +43,39 @@ def buscar_processo_por_entrada(entrada):
     conn_proc = sqlite3.connect(db_processos)
     cursor_proc = conn_proc.cursor()
 
-    # Buscar por CPF (normalizado para 11 dígitos)
-    cursor_proc.execute("SELECT processo, vara, nome, status, cpf, matriculas FROM processos WHERE cpf = ?", (entrada,))
-    result = cursor_proc.fetchone()
+    resultados = []
 
-    # Se não achar por CPF, busca entre todas as matrículas
-    if not result:
+    # Primeiro: buscar por CPF
+    cursor_proc.execute("SELECT processo, vara, nome, status, cpf, matriculas FROM processos WHERE cpf = ?", (entrada,))
+    resultados = cursor_proc.fetchall()
+
+    # Se não encontrou por CPF, tenta buscar por matrícula
+    if not resultados:
         cursor_proc.execute("SELECT processo, vara, nome, status, cpf, matriculas FROM processos")
         for row in cursor_proc.fetchall():
             processo, vara, nome, status, cpf, matriculas = row
             lista_matriculas = [m.strip() for m in re.split(r"[\/,]", matriculas)]
             if entrada in lista_matriculas:
-                result = row
+                resultados = [row]
                 break
+
+    if not resultados:
+        conn_proc.close()
+        return []
+
+    # Agrupar matrículas, e usar os dados do primeiro processo como referência
+    processo_ref, vara_ref, nome_ref, status_ref, cpf_ref, _ = resultados[0]
+    todas_matriculas = []
+
+    for row in resultados:
+        _, _, _, _, _, matriculas = row
+        todas_matriculas.extend([m.strip() for m in re.split(r"[\/,]", matriculas)])
+
+    todas_matriculas = list(set(m for m in todas_matriculas if m))  # Remove duplicatas
 
     conn_proc.close()
 
-    if not result:
-        return []
-
-    processo, vara, nome, status, cpf, matriculas = result
-    lista_matriculas = [m.strip() for m in re.split(r"[\/,]", matriculas)]
-
+    # Agora buscar os cálculos com base em todas as matrículas
     conn_calc = sqlite3.connect(db_calculos)
     cursor_calc = conn_calc.cursor()
 
@@ -73,15 +84,13 @@ def buscar_processo_por_entrada(entrada):
     cursor_calc.execute("SELECT nome, matriculas, link FROM calculos")
     for nome_calc, matr_calc, link in cursor_calc.fetchall():
         mats = [m.strip() for m in re.split(r"[\/,]", matr_calc)] if matr_calc else []
-
-        # Primeiro tenta encontrar pela matrícula
-        if any(m in lista_matriculas for m in mats):
+        if any(m in todas_matriculas for m in mats):
             if link not in links:
                 links.append(link)
 
-    # Se nenhum link foi encontrado pelas matrículas, tenta buscar por nome
+    # Se nenhum link foi encontrado, tenta buscar por nome
     if not links:
-        nome_normalizado = re.sub(r"\s+", "", nome).lower()
+        nome_normalizado = re.sub(r"\s+", "", nome_ref).lower()
         cursor_calc.execute("SELECT nome, link FROM calculos")
         for nome_calc, link in cursor_calc.fetchall():
             nome_calc_normalizado = re.sub(r"\s+", "", nome_calc).lower()
@@ -92,15 +101,14 @@ def buscar_processo_por_entrada(entrada):
     conn_calc.close()
 
     return [{
-        "processo": processo,
-        "vara": vara,
-        "nome": nome,
-        "status": status,
-        "cpf": cpf,
-        "matriculas": matriculas,
+        "processo": processo_ref,
+        "vara": vara_ref,
+        "nome": nome_ref,
+        "status": status_ref,
+        "cpf": cpf_ref,
+        "matriculas": " / ".join(todas_matriculas),
         "calculos": links
     }]
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
-
