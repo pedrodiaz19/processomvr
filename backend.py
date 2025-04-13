@@ -1,4 +1,4 @@
-import os
+import os 
 import re
 import sqlite3
 from flask import Flask, request, jsonify, send_from_directory
@@ -65,17 +65,29 @@ def buscar_processo_por_entrada(entrada):
     processo, vara, nome, status, cpf, matriculas = result
     lista_matriculas = [m.strip() for m in re.split(r"[\/,]", matriculas)]
 
-    # Procurar links relacionados no banco de cálculos
     conn_calc = sqlite3.connect(db_calculos)
     cursor_calc = conn_calc.cursor()
 
     links = []
+
     cursor_calc.execute("SELECT nome, matriculas, link FROM calculos")
     for nome_calc, matr_calc, link in cursor_calc.fetchall():
-        mats = [m.strip() for m in re.split(r"[\/,]", matr_calc)]
+        mats = [m.strip() for m in re.split(r"[\/,]", matr_calc)] if matr_calc else []
+
+        # Primeiro tenta encontrar pela matrícula
         if any(m in lista_matriculas for m in mats):
             if link not in links:
                 links.append(link)
+
+    # Se nenhum link foi encontrado pelas matrículas, tenta buscar por nome
+    if not links:
+        nome_normalizado = re.sub(r"\s+", "", nome).lower()
+        cursor_calc.execute("SELECT nome, link FROM calculos")
+        for nome_calc, link in cursor_calc.fetchall():
+            nome_calc_normalizado = re.sub(r"\s+", "", nome_calc).lower()
+            if nome_normalizado in nome_calc_normalizado or nome_calc_normalizado in nome_normalizado:
+                if link not in links:
+                    links.append(link)
 
     conn_calc.close()
 
@@ -88,6 +100,7 @@ def buscar_processo_por_entrada(entrada):
         "matriculas": matriculas,
         "calculos": links
     }]
-    
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
+
