@@ -114,7 +114,7 @@
 
             entrada = entrada.replace(/[.\-]/g, '');
 
-            fetch(`https://site-p-mrv.onrender.com/consulta?processo=${entrada}`)
+            fetch(`https://processomvr.onrender.com/consulta?processo=${entrada}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`Erro HTTP! Status: ${response.status}`);
