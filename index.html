@@ -82,5 +82,79 @@
         <h2>Consulta de Processos</h2>
 
         <div class="instrucoes">
-            <p><strong>Instru
+            <p><strong>Instruções:</strong></p>
+            <p>Este site permite que professores e servidores consultem o andamento ou cálculo do processo contra o Município de Volta Redonda.</p>
+            <p>Para acessar as informações, digite seu número de CPF ou matrícula e clique em <strong>Consultar</strong>.</p>
+        </div>
+
+        <input type="text" id="numero_processo" placeholder="Digite o número de matrícula ou CPF" onkeydown="verificaEnter(event)">
+        <button onclick="consultarProcesso()">Consultar</button>
+        <div id="resultado" class="resultado-container"></div>
+
+        <div class="atualizacao">Última atualização do site: 14/04/2025</div>
+    </div>
+
+    <script>
+        function verificaEnter(event) {
+            if (event.key === "Enter") {
+                consultarProcesso();
+            }
+        }
+
+        function consultarProcesso() {
+            let entrada = document.getElementById("numero_processo").value;
+            let resultadoDiv = document.getElementById("resultado");
+
+            if (!entrada) {
+                alert("Por favor, insira um número de matrícula ou CPF.");
+                return;
+            }
+
+            resultadoDiv.innerHTML = "<p><em>Carregando...</em></p>";
+
+            entrada = entrada.replace(/[.\-]/g, '');
+
+            fetch(`https://site-p-mrv.onrender.com/consulta?processo=${entrada}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    resultadoDiv.innerHTML = "";
+
+                    if (data.erro) {
+                        resultadoDiv.innerHTML = `<p style='color: red;'>${data.erro}</p>`;
+                    } else {
+                        data.forEach(item => {
+                            let linkCalculo = "Não disponível.";
+                            if (item.calculos && item.calculos.length > 0) {
+                                linkCalculo = item.calculos.map((link, i) => {
+                                    return `<a href="${link}" target="_blank">Baixar Cálculo ${item.calculos.length > 1 ? i + 1 : ""}</a>`;
+                                }).join("<br>");
+                            }
+
+                            resultadoDiv.innerHTML += `
+                                <div class='resultado'>
+                                    <p><strong>Processo:</strong> ${item.processo}</p>
+                                    <p><strong>Vara:</strong> ${item.vara}</p>
+                                    <p><strong>Nome:</strong> ${item.nome}</p>
+                                    <p><strong>Status:</strong> ${item.status}</p>
+                                    <p><strong>Cálculo:</strong> ${linkCalculo}</p>
+                                    <hr>
+                                </div>
+                            `;
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Erro na requisição:", error);
+                    resultadoDiv.innerHTML = `<p style='color: red;'>Erro ao buscar processo. Verifique o console.</p>`;
+                });
+        }
+    </script>
+</body>
+</html>
+
 
