@@ -88,13 +88,13 @@ def buscar_processo_por_entrada(entrada):
             if link not in links:
                 links.append(link)
 
-    # Se nenhum link foi encontrado, tenta buscar por nome
+    # Se nenhum link foi encontrado, tenta buscar por nome EXATO
     if not links:
         nome_normalizado = re.sub(r"\s+", "", nome_ref).lower()
         cursor_calc.execute("SELECT nome, link FROM calculos")
         for nome_calc, link in cursor_calc.fetchall():
             nome_calc_normalizado = re.sub(r"\s+", "", nome_calc).lower()
-            if nome_normalizado in nome_calc_normalizado or nome_calc_normalizado in nome_normalizado:
+            if nome_normalizado == nome_calc_normalizado:
                 if link not in links:
                     links.append(link)
 
@@ -112,3 +112,4 @@ def buscar_processo_por_entrada(entrada):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
+
