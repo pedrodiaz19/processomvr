@@ -63,10 +63,10 @@ def buscar_processo_por_entrada(entrada):
     saida = []
 
     for processo, tipo, vara, nome, status, cpf, matriculas in resultados:
-        # Escolher banco de dados de cálculos com base no número do processo
-        if processo == "0003570-25.1999.8.19.0066":
+        # Escolher banco de dados de cálculos com base no tipo
+        if tipo == "0003570-25.1999.8.19.0066":
             db_calculos = os.path.join(BASE_DIR, "calculosasvre1999.db")
-        elif processo == "0011127-19.2006.8.19.0066":
+        elif tipo == "0011127-19.2006.8.19.0066":
             db_calculos = os.path.join(BASE_DIR, "calculosasvre2006.db")
         else:
             db_calculos = os.path.join(BASE_DIR, "calculos.db")
