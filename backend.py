@@ -43,73 +43,67 @@ def buscar_processo_por_entrada(entrada):
     conn_proc = sqlite3.connect(db_processos)
     cursor_proc = conn_proc.cursor()
 
-    resultados = []
-
     # Primeiro: buscar por CPF
-    cursor_proc.execute("SELECT processo, vara, nome, status, cpf, matriculas FROM processos WHERE cpf = ?", (entrada,))
+    cursor_proc.execute("SELECT processo, tipo, vara, nome, status, cpf, matriculas FROM processos WHERE cpf = ?", (entrada,))
     resultados = cursor_proc.fetchall()
 
     # Se não encontrou por CPF, tenta buscar por matrícula
     if not resultados:
-        cursor_proc.execute("SELECT processo, vara, nome, status, cpf, matriculas FROM processos")
+        cursor_proc.execute("SELECT processo, tipo, vara, nome, status, cpf, matriculas FROM processos")
         for row in cursor_proc.fetchall():
-            processo, vara, nome, status, cpf, matriculas = row
+            processo, tipo, vara, nome, status, cpf, matriculas = row
             lista_matriculas = [m.strip() for m in re.split(r"[\/,]", matriculas)]
             if entrada in lista_matriculas:
-                resultados = [row]
-                break
+                resultados.append(row)
 
     if not resultados:
         conn_proc.close()
         return []
 
-    # Agrupar matrículas, e usar os dados do primeiro processo como referência
-    processo_ref, vara_ref, nome_ref, status_ref, cpf_ref, _ = resultados[0]
-    todas_matriculas = []
-
-    for row in resultados:
-        _, _, _, _, _, matriculas = row
-        todas_matriculas.extend([m.strip() for m in re.split(r"[\/,]", matriculas)])
-
-    todas_matriculas = list(set(m for m in todas_matriculas if m))  # Remove duplicatas
-
     conn_proc.close()
 
-    # Agora buscar os cálculos com base em todas as matrículas
+    # Conexão com banco de cálculos
     conn_calc = sqlite3.connect(db_calculos)
     cursor_calc = conn_calc.cursor()
-
-    links = []
-
     cursor_calc.execute("SELECT nome, matriculas, link FROM calculos")
-    for nome_calc, matr_calc, link in cursor_calc.fetchall():
-        mats = [m.strip() for m in re.split(r"[\/,]", matr_calc)] if matr_calc else []
-        if any(m in todas_matriculas for m in mats):
-            if link not in links:
-                links.append(link)
+    calculos = cursor_calc.fetchall()
+    cursor_calc.execute("SELECT nome, link FROM calculos")
+    calculos_por_nome = cursor_calc.fetchall()
+    conn_calc.close()
 
-    # Se nenhum link foi encontrado, tenta buscar por nome EXATO
-    if not links:
-        nome_normalizado = re.sub(r"\s+", "", nome_ref).lower()
-        cursor_calc.execute("SELECT nome, link FROM calculos")
-        for nome_calc, link in cursor_calc.fetchall():
-            nome_calc_normalizado = re.sub(r"\s+", "", nome_calc).lower()
-            if nome_normalizado == nome_calc_normalizado:
+    saida = []
+    for processo, tipo, vara, nome, status, cpf, matriculas in resultados:
+        todas_matriculas = list(set([m.strip() for m in re.split(r"[\/,]", matriculas) if m]))
+
+        # Buscar links de cálculo por matrícula
+        links = []
+        for nome_calc, mats_calc, link in calculos:
+            mats = [m.strip() for m in re.split(r"[\/,]", mats_calc)] if mats_calc else []
+            if any(m in todas_matriculas for m in mats):
                 if link not in links:
                     links.append(link)
 
-    conn_calc.close()
+        # Se não achou por matrícula, tenta pelo nome
+        if not links:
+            nome_normalizado = re.sub(r"\s+", "", nome).lower()
+            for nome_calc, link in calculos_por_nome:
+                nome_calc_normalizado = re.sub(r"\s+", "", nome_calc).lower()
+                if nome_normalizado in nome_calc_normalizado or nome_calc_normalizado in nome_normalizado:
+                    if link not in links:
+                        links.append(link)
 
-    return [{
-        "processo": processo_ref,
-        "vara": vara_ref,
-        "nome": nome_ref,
-        "status": status_ref,
-        "cpf": cpf_ref,
-        "matriculas": " / ".join(todas_matriculas),
-        "calculos": links
-    }]
+        saida.append({
+            "tipo": tipo,
+            "processo": processo,
+            "vara": vara,
+            "nome": nome,
+            "status": status,
+            "cpf": cpf,
+            "matriculas": " / ".join(todas_matriculas),
+            "calculos": links
+        })
+
+    return saida
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
-
