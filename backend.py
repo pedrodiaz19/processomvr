@@ -38,16 +38,15 @@ def consulta():
 
 def buscar_processo_por_entrada(entrada):
     db_processos = os.path.join(BASE_DIR, "processos.db")
-    db_calculos = os.path.join(BASE_DIR, "calculos.db")
 
     conn_proc = sqlite3.connect(db_processos)
     cursor_proc = conn_proc.cursor()
 
-    # Primeiro: buscar por CPF
+    # Buscar por CPF
     cursor_proc.execute("SELECT processo, tipo, vara, nome, status, cpf, matriculas FROM processos WHERE cpf = ?", (entrada,))
     resultados = cursor_proc.fetchall()
 
-    # Se não encontrou por CPF, tenta buscar por matrícula
+    # Se não encontrou por CPF, tenta por matrícula
     if not resultados:
         cursor_proc.execute("SELECT processo, tipo, vara, nome, status, cpf, matriculas FROM processos")
         for row in cursor_proc.fetchall():
@@ -56,26 +55,32 @@ def buscar_processo_por_entrada(entrada):
             if entrada in lista_matriculas:
                 resultados.append(row)
 
-    if not resultados:
-        conn_proc.close()
-        return []
-
     conn_proc.close()
 
-    # Conexão com banco de cálculos
-    conn_calc = sqlite3.connect(db_calculos)
-    cursor_calc = conn_calc.cursor()
-    cursor_calc.execute("SELECT nome, matriculas, link FROM calculos")
-    calculos = cursor_calc.fetchall()
-    cursor_calc.execute("SELECT nome, link FROM calculos")
-    calculos_por_nome = cursor_calc.fetchall()
-    conn_calc.close()
+    if not resultados:
+        return []
 
     saida = []
+
     for processo, tipo, vara, nome, status, cpf, matriculas in resultados:
+        # Escolher banco de dados de cálculos com base no número do processo
+        if processo == "0003570-25.1999.8.19.0066":
+            db_calculos = os.path.join(BASE_DIR, "calculosasvre1999.db")
+        elif processo == "0011127-19.2006.8.19.0066":
+            db_calculos = os.path.join(BASE_DIR, "calculosasvre2006.db")
+        else:
+            db_calculos = os.path.join(BASE_DIR, "calculos.db")
+
+        conn_calc = sqlite3.connect(db_calculos)
+        cursor_calc = conn_calc.cursor()
+        cursor_calc.execute("SELECT nome, matriculas, link FROM calculos")
+        calculos = cursor_calc.fetchall()
+        cursor_calc.execute("SELECT nome, link FROM calculos")
+        calculos_por_nome = cursor_calc.fetchall()
+        conn_calc.close()
+
         todas_matriculas = list(set([m.strip() for m in re.split(r"[\/,]", matriculas) if m]))
 
-        # Buscar links de cálculo por matrícula
         links = []
         for nome_calc, mats_calc, link in calculos:
             mats = [m.strip() for m in re.split(r"[\/,]", mats_calc)] if mats_calc else []
@@ -83,7 +88,6 @@ def buscar_processo_por_entrada(entrada):
                 if link not in links:
                     links.append(link)
 
-        # Se não achou por matrícula, tenta pelo nome
         if not links:
             nome_normalizado = re.sub(r"\s+", "", nome).lower()
             for nome_calc, link in calculos_por_nome:
