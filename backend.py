@@ -42,11 +42,11 @@ def buscar_processo_por_entrada(entrada):
     conn_proc = sqlite3.connect(db_processos)
     cursor_proc = conn_proc.cursor()
 
-    # Primeiro: buscar por CPF
+    # Buscar por CPF
     cursor_proc.execute("SELECT processo, tipo, vara, nome, status, cpf, matriculas FROM processos WHERE cpf = ?", (entrada,))
     resultados = cursor_proc.fetchall()
 
-    # Se não encontrou por CPF, tenta buscar por matrícula
+    # Se não encontrou por CPF, tenta por matrícula
     if not resultados:
         cursor_proc.execute("SELECT processo, tipo, vara, nome, status, cpf, matriculas FROM processos")
         for row in cursor_proc.fetchall():
@@ -63,10 +63,7 @@ def buscar_processo_por_entrada(entrada):
     saida = []
 
     for processo, tipo, vara, nome, status, cpf, matriculas in resultados:
-        tipo = tipo or ""  # Evita erro se tipo for None
-
-        # DEBUG: print para verificação do tipo e processo
-        print(f"Processando: {nome} - {processo} (Tipo: {tipo})")
+        tipo = tipo or ""
 
         # Escolher banco de dados de cálculos com base no tipo
         if tipo == "0003570-25.1999.8.19.0066":
@@ -76,41 +73,36 @@ def buscar_processo_por_entrada(entrada):
         else:
             db_calculos = os.path.join(BASE_DIR, "calculos.db")
 
-        # Verifica se o banco de cálculos existe
-        if not os.path.exists(db_calculos):
-            print(f"Banco de dados não encontrado: {db_calculos}")
-            continue  # Pula para o próximo resultado
-
-        try:
-            conn_calc = sqlite3.connect(db_calculos)
-            cursor_calc = conn_calc.cursor()
-            cursor_calc.execute("SELECT nome, matriculas, link FROM calculos")
-            calculos = cursor_calc.fetchall()
-            cursor_calc.execute("SELECT nome, link FROM calculos")
-            calculos_por_nome = cursor_calc.fetchall()
-            conn_calc.close()
-        except Exception as e:
-            print(f"Erro ao acessar {db_calculos}: {e}")
-            continue
-
-        todas_matriculas = list(set([m.strip() for m in re.split(r"[\/,]", matriculas) if m]))
-
-        # Buscar links de cálculo por matrícula
         links = []
-        for nome_calc, mats_calc, link in calculos:
-            mats = [m.strip() for m in re.split(r"[\/,]", mats_calc)] if mats_calc else []
-            if any(m in todas_matriculas for m in mats):
-                if link not in links:
-                    links.append(link)
+        if os.path.exists(db_calculos):
+            try:
+                conn_calc = sqlite3.connect(db_calculos)
+                cursor_calc = conn_calc.cursor()
+                cursor_calc.execute("SELECT nome, matriculas, link FROM calculos")
+                calculos = cursor_calc.fetchall()
+                cursor_calc.execute("SELECT nome, link FROM calculos")
+                calculos_por_nome = cursor_calc.fetchall()
+                conn_calc.close()
 
-        # Se não achou por matrícula, tenta pelo nome
-        if not links:
-            nome_normalizado = re.sub(r"\s+", "", nome).lower()
-            for nome_calc, link in calculos_por_nome:
-                nome_calc_normalizado = re.sub(r"\s+", "", nome_calc).lower()
-                if nome_normalizado in nome_calc_normalizado or nome_calc_normalizado in nome_normalizado:
-                    if link not in links:
-                        links.append(link)
+                todas_matriculas = list(set([m.strip() for m in re.split(r"[\/,]", matriculas) if m]))
+
+                for nome_calc, mats_calc, link in calculos:
+                    mats = [m.strip() for m in re.split(r"[\/,]", mats_calc)] if mats_calc else []
+                    if any(m in todas_matriculas for m in mats):
+                        if link not in links:
+                            links.append(link)
+
+                if not links:
+                    nome_normalizado = re.sub(r"\s+", "", nome).lower()
+                    for nome_calc, link in calculos_por_nome:
+                        nome_calc_normalizado = re.sub(r"\s+", "", nome_calc).lower()
+                        if nome_normalizado in nome_calc_normalizado or nome_calc_normalizado in nome_normalizado:
+                            if link not in links:
+                                links.append(link)
+            except Exception as e:
+                print(f"Erro ao acessar {db_calculos}: {e}")
+        else:
+            print(f"Banco de dados não encontrado (ainda): {db_calculos}")
 
         saida.append({
             "tipo": tipo,
@@ -119,7 +111,7 @@ def buscar_processo_por_entrada(entrada):
             "nome": nome,
             "status": status,
             "cpf": cpf,
-            "matriculas": " / ".join(todas_matriculas),
+            "matriculas": " / ".join([m.strip() for m in re.split(r"[\/,]", matriculas) if m]),
             "calculos": links
         })
 
