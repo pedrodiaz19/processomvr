@@ -60,7 +60,7 @@ def buscar_processo_por_entrada(entrada):
     if not resultados:
         return []
 
-    processos_dict = {}
+    saida = []
 
     for processo, tipo, vara, nome, status, cpf, matriculas in resultados:
         tipo = tipo or ""
@@ -104,22 +104,18 @@ def buscar_processo_por_entrada(entrada):
         else:
             print(f"Banco de dados não encontrado (ainda): {db_calculos}")
 
-        # Agrupar por número de processo
-        if processo in processos_dict:
-            processos_dict[processo]["calculos"].extend([l for l in links if l not in processos_dict[processo]["calculos"]])
-        else:
-            processos_dict[processo] = {
-                "tipo": tipo,
-                "processo": processo,
-                "vara": vara,
-                "nome": nome,
-                "status": status,
-                "cpf": cpf,
-                "matriculas": " / ".join([m.strip() for m in re.split(r"[\/,]", matriculas) if m]),
-                "calculos": links
-            }
+        saida.append({
+            "tipo": tipo,
+            "processo": processo,
+            "vara": vara,
+            "nome": nome,
+            "status": status,
+            "cpf": cpf,
+            "matriculas": " / ".join([m.strip() for m in re.split(r"[\/,]", matriculas) if m]),
+            "calculos": links
+        })
 
-    return list(processos_dict.values())
+    return saida
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
