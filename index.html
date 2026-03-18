@@ -204,6 +204,12 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             gap: 18px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .resultado-container.multi {
+            max-width: 100%;
         }
 
         .resultado {
@@ -439,6 +445,12 @@
                         return;
                     }
 
+                    if (data.length > 1) {
+                        resultadoDiv.classList.add('multi');
+                    } else {
+                        resultadoDiv.classList.remove('multi');
+                    }
+
                     data.forEach((item, idx) => {
                         let linkCalculo = formatCalcLinks(item.calculos);
 
@@ -486,4 +498,3 @@
     </script>
 </body>
 </html>
-
